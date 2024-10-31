@@ -10,41 +10,50 @@ const CurrencyRates = () => {
     const currencies = ['CAD', 'IDR', 'JPY', 'CHF', 'EUR', 'GBP'];
 
     const fetchRates = async () => {
-        try {
-          const url = `https://api.currencyfreaks.com/latest?apikey=${apiKey}&base=USD`;
-          console.log('Fetching URL:', url);
-      
-          const response = await axios.get(url);
-          console.log('API Response:', response.data);
-      
-          const exchangeRates = response.data.rates;
-      
-          if (exchangeRates) {
-            const currencyData = currencies.map(currency => {
-              const rate = exchangeRates[currency];
-              if (rate) {
-                return {
-                  currency,
-                  weBuy: (rate * 1.05).toFixed(4),
-                  exchangeRate: rate.toFixed(4),
-                  weSell: (rate * 0.95).toFixed(4),
-                };
-              } else {
-                console.warn(`Rate not found for currency: ${currency}`);
-                return null;
-              }
-            }).filter(Boolean);
-      
-            setRates(currencyData);
-          } else {
-            setError('No rates found');
-          }
-        } catch (error) {
-          setError(`Error fetching currency rates: ${error.message}`);
-          console.error("Error fetching currency rates", error);
+      try {
+        const url = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${apiKey}`;
+        console.log('Fetching URL:', url);
+
+        const response = await axios.get(url);
+        console.log('API Response:', response.data);
+
+        const exchangeRates = response.data.rates;
+
+        if (exchangeRates) {
+          const currencyData = currencies.map(currency => {
+            const rate = parseFloat(exchangeRates[currency]);
+            if (!isNaN(rate)) {
+              return {
+                currency,
+                weBuy: (rate * 1.05).toFixed(4),
+                exchangeRate: rate.toFixed(4),
+                weSell: (rate * 0.95).toFixed(4),
+              };
+            } else {
+              console.warn(`Invalid rate for currency: ${currency}`);
+              return null;
+            }
+          }).filter(Boolean);
+
+          setRates(currencyData);
+          setError(null);
+        } else {
+          setError('No rates found');
         }
-      };
-      
+      } catch (error) {
+        // Improved error handling
+        if (error.response) {
+          setError(`Error fetching currency rates: ${error.response.data.message}`);
+          console.error("API Error:", error.response.data);
+        } else if (error.request) {
+          setError('No response received from API');
+          console.error("Request Error:", error.request);
+        } else {
+          setError(`Error: ${error.message}`);
+          console.error("General Error:", error.message);
+        }
+      }
+    };
 
     fetchRates();
   }, [apiKey]);
